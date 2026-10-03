@@ -45,7 +45,6 @@ def group(schema, name, granularity="day"):
 
 def payload(spec, schema, config, now=None, native=False):
     ident, page, role, title, kind, category, agg, value, subgroup = spec
-    view_identity = ident
     ident = ident.split("_")[0]
     now = now or datetime.now(SEOUL).date()
     filters = [
@@ -74,7 +73,7 @@ def payload(spec, schema, config, now=None, native=False):
         if not scope.get("observational"):
             filters.append({"property": "Comparable", "checkbox": {"equals": True}})
         else:
-            title += " · 조건 미확인 관측"
+            title += " · 조건 미확인"
         filters.append({"property": "Reps", "number": {"greater_than": 0}})
     if ident in {"C01", "C03"}:
         filters += [
@@ -106,7 +105,7 @@ def payload(spec, schema, config, now=None, native=False):
         "color_theme": "teal", "height": "large", "show_data_labels": True,
         "axis_labels": "both", "grid_lines": "horizontal",
         "hide_empty_groups": True, "legend_position": "bottom" if subgroup else "off",
-        "caption": "최근 12주 · 원본 관계에서 근거 확인 · 이 보기의 필터 적용",
+        "caption": "최근 12주",
     }
     if subgroup:
         chart["stack_by"] = group(schema, subgroup)
@@ -115,8 +114,6 @@ def payload(spec, schema, config, now=None, native=False):
         chart.update(smooth_line=False, hide_line_fill_area=True, cumulative=False)
         if ident.startswith("C10"):
             chart["reference_lines"] = [{"value": 100, "label": "기준 수행 = 100", "color": "gray", "dash_style": "dash"}]
-        else:
-            chart["caption"] += " · 관측 사이 연속 발전을 의미하지 않음"
     if kind in {"bar", "column"}:
         chart["y_axis_min"] = 0
         if subgroup:
@@ -124,11 +121,11 @@ def payload(spec, schema, config, now=None, native=False):
     if kind == "donut":
         chart.update(donut_labels="name_and_value", legend_position="side", color_theme="colorful")
     if scope.get("observational") and ident in {"C01", "C02", "C03", "C08"}:
-        chart["caption"] += " · 기구·그립·중량 기준 미확인, 동일 조건 발전으로 해석 금지"
+        chart["caption"] += " · 조건 미확인: 발전 비교 제외"
     if ident == "C06T" and native:
-        chart["caption"] += " · 상위 종목 선정: " + config["top10_updated_at"]
+        chart["caption"] += " · 순위 갱신 " + config["top10_updated_at"][:10]
     return {
-        "name": f"NFT {view_identity} · {title}", "type": "chart",
+        "name": title, "type": "chart",
         "filter": {"and": filters}, "configuration": chart,
         "quick_filters": {},
     }

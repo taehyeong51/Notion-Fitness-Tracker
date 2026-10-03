@@ -15,6 +15,7 @@ from .source import title, value
 
 ROOT_TITLE = "Fitness Tracker · 분석"
 ROOT_NOTE = "원본 기록과 기존 리뷰를 보존하는 네이티브 차트·연결 보기입니다."
+HOME = "home"
 PAGE_NAMES = ["운동 성과", "훈련 구성", "비교 분석", "관리·집계"]
 MARKER = "NFT_MANAGED_PROJECTION_V1"
 ROLE_TITLES = {"sessions": "NFT · Chart Sessions", "sets": "NFT · Chart Sets",
@@ -172,7 +173,14 @@ class Deploy:
     def persist(self):
         save(self.path, self.state)
 
-    def create_page(self, name, parent, note):
+    def page_target(self, name):
+        if name == HOME:
+            return self.config["parent_page_id"]
+        if name == ROOT_TITLE:
+            return self.state["root"]
+        return self.state["pages"][name]
+
+    def create_page(self, name, parent, note, status_enabled=True):
         matches = [row for row in self.client.search(name)
                    if row["object"] == "page" and title(row) == name
                    and row.get("parent", {}).get("page_id") == parent
@@ -186,15 +194,19 @@ class Deploy:
                        and value({"type": "rich_text", "rich_text": block["paragraph"]["rich_text"]}) == note
                        for block in blocks):
                 raise ValueError("An existing page is not managed; preserve it")
-            status = [block for block in blocks if block.get("type") == "callout" and value({"type": "rich_text", "rich_text": block['callout']['rich_text']}).startswith(("집계", "원본 조회/집계"))]
+            if not status_enabled:
+                return row, None
+            status = [block for block in blocks if block.get("type") == "callout" and value({"type": "rich_text", "rich_text": block['callout']['rich_text']}).startswith(("집계", "갱신", "원본 조회/집계"))]
             if len(status) != 1:
                 raise ValueError("Managed page status block is ambiguous")
             return row, status[0]["id"]
         row = self.client.request("POST", "/pages", {
             "parent": {"type": "page_id", "page_id": parent},
             "properties": {"title": {"title": text(name)}},
-            "children": [paragraph(note), callout("집계 미완료 · 검증 전")],
+            "children": [paragraph(note)] + ([callout("집계 미완료 · 검증 전")] if status_enabled else []),
         })
+        if not status_enabled:
+            return row, None
         blocks = list(self.client.pages(f"/blocks/{row['id']}/children", method="GET"))
         status = [block for block in blocks if block.get("type") == "callout"]
         if len(status) != 1:
@@ -202,12 +214,14 @@ class Deploy:
         return row, status[0]["id"]
 
     def ensure_pages(self):
+        compact = self.config.get("compact_layout")
         root = self.state.get("root")
         if not root:
-            row, status = self.create_page(ROOT_TITLE, self.config["parent_page_id"], ROOT_NOTE)
+            row, status = self.create_page("설정" if compact else ROOT_TITLE, self.config["parent_page_id"], "원본 DB · 비교 설정 · 집계" if compact else ROOT_NOTE, not compact)
             root = self.state["root"] = row["id"]
             self.state["root_url"] = row["url"]
-            self.state["status_blocks"][ROOT_TITLE] = status
+            if status:
+                self.state["status_blocks"][ROOT_TITLE] = status
             self.persist()
         else:
             page = self.client.request("GET", "/pages/" + root)
@@ -219,18 +233,50 @@ class Deploy:
             "비교 분석": "확정한 기준 수행을 100으로 비교합니다. 풀업 반복 지수는 중량 종목 지수와 합산하지 않습니다.",
             "관리·집계": "이 DB들은 원본의 파생 집계입니다. 원본 기록과 기존 리뷰는 변경하지 않습니다.",
         }
+        if compact:
+            notes = {"운동 성과": "최근 12주 · e1RM은 추정값", "훈련 구성": "최근 12주 · 세션은 운동 횟수, 세트는 기록 수",
+                     "비교 분석": "같은 조건의 기준 수행 = 100", "관리·집계": "상위 종목 선정 · 주간 집계"}
         for name in PAGE_NAMES:
+            parent = self.config["parent_page_id"] if self.config.get("compact_layout") and name in {"운동 성과", "훈련 구성"} else root
             if name not in self.state["pages"]:
-                row, status = self.create_page(name, root, notes[name])
+                display = {"비교 분석": "비교 설정", "관리·집계": "집계"}.get(name, name) if compact else name
+                row, status = self.create_page(display, parent, notes[name], not compact or name == "관리·집계")
                 self.state["pages"][name] = row["id"]
-                self.state["status_blocks"][name] = status
+                if status:
+                    self.state["status_blocks"][name] = status
                 self.persist()
             else:
                 row = self.client.request("GET", "/pages/" + self.state["pages"][name])
-                if row.get("in_trash") or row["parent"].get("page_id") != root:
+                if row.get("in_trash") or row["parent"].get("page_id") != parent:
                     raise ValueError("Managed child page was moved or trashed")
 
     def navigation(self):
+        if self.config.get("compact_layout"):
+            page = self.config["parent_page_id"]
+            key = "nav_" + page
+            links = []
+            targets = [(name, self.state["pages"][name]) for name in ["운동 성과", "훈련 구성"]]
+            if self.config.get("health_page_id"):
+                targets.append(("건강", self.config["health_page_id"]))
+            for name, identifier in targets:
+                if links:
+                    links.extend(text("  ·  "))
+                links.append({"type": "text", "text": {"content": name, "link": {"url": "https://www.notion.so/" + identifier.replace("-", "")}}})
+            body = {"paragraph": {"rich_text": links}}
+            if self.state.get(key):
+                self.client.request("PATCH", "/blocks/" + self.state[key], body)
+            else:
+                existing = list(self.client.pages(f"/blocks/{page}/children", method="GET"))
+                matches = [block for block in existing if block["type"] == "paragraph" and contains(block["paragraph"]["rich_text"], links)]
+                if len(matches) > 1:
+                    raise ValueError("Duplicate managed navigation")
+                if matches:
+                    self.state[key] = matches[0]["id"]
+                else:
+                    row = self.client.request("PATCH", f"/blocks/{page}/children", {"position": {"type": "start"}, "children": [{"object": "block", "type": "paragraph", **body}]})
+                    self.state[key] = row["results"][0]["id"]
+                self.persist()
+            return
         links = []
         for name in ["운동 성과", "훈련 구성", "비교 분석"]:
             if links:
@@ -269,7 +315,10 @@ class Deploy:
 
     def status(self, message, success=False):
         color = "green_background" if success else "yellow_background"
-        for identifier in self.state["status_blocks"].values():
+        blocks = self.state["status_blocks"]
+        if self.config.get("compact_layout"):
+            blocks = {key: identifier for key, identifier in blocks.items() if key == "관리·집계"}
+        for identifier in blocks.values():
             self.client.request("PATCH", "/blocks/" + identifier, {"callout": {
                 "rich_text": text(message), "color": color}})
 
@@ -281,6 +330,8 @@ class Deploy:
         message = (f"측정조건 확인 종목 {len(exercises)}/{len(candidates)} · 핵심 종목 세트 {len(confirmed)}/{len(core)}"
                    " · 발전 지수는 확인된 동일 조건과 유효 기준이 있는 수행만 표시합니다."
                    " 조건 미확인 추세는 운동 성과에서 관측치로 확인할 수 있습니다.")
+        if self.config.get("compact_layout"):
+            message = f"조건 확인 {len(confirmed)}/{len(core)}세트 · 조건과 기준 입력 후 발전 지수를 사용하세요."
         body = callout(message, 'yellow_background')
         identifier = self.state.get('comparison_note')
         if identifier:
@@ -412,10 +463,12 @@ class Deploy:
         return changes
 
     def ensure_view(self, identity, page_name, role, body, source_override=None, container_identity=None):
+        if identity in self.config.get("disabled_views", []):
+            return
         source = source_override or self.state["databases"][role]["data_source_id"]
         identifier = self.state["views"].get(identity)
         if not identifier:
-            parent = self.state["root"] if page_name == ROOT_TITLE else self.state["pages"][page_name]
+            parent = self.page_target(page_name)
             if source not in self._view_cache:
                 refs = self.client.pages("/views", query={"data_source_id": source}, method="GET")
                 self._view_cache[source] = [self.client.request("GET", "/views/" + ref["id"]) for ref in refs]
@@ -424,7 +477,7 @@ class Deploy:
                 if view["name"] != body["name"] or view.get("data_source_id") != source:
                     continue
                 container = self.client.request("GET", "/databases/" + view["parent"]["database_id"])
-                if container["parent"].get("page_id") == parent:
+                if not container.get("in_trash") and container["parent"].get("page_id") == parent:
                     matches.append(view)
             if len(matches) > 1:
                 raise ValueError("Duplicate view names; inspect before retrying")
@@ -432,6 +485,12 @@ class Deploy:
                 identifier = matches[0]["id"]
             else:
                 placement = {"create_database": {"parent": {"type": "page_id", "page_id": parent}}}
+                if identity in self.config.get("view_anchors", {}):
+                    anchor = self.config["view_anchors"][identity]
+                    if isinstance(anchor, dict):
+                        anchor_view = self.client.request("GET", "/views/" + self.state["views"][anchor["view"]])
+                        anchor = anchor_view["parent"]["database_id"]
+                    placement["create_database"]["position"] = {"type": "after_block", "block_id": anchor}
                 if container_identity:
                     anchor = self.client.request("GET", "/views/" + self.state["views"][container_identity])
                     if anchor["data_source_id"] != source:
@@ -450,7 +509,9 @@ class Deploy:
         if view.get("data_source_id") != source:
             raise ValueError("Managed view source changed")
         db = self.client.request("GET", "/databases/" + view["parent"]["database_id"])
-        target = self.state["root"] if page_name == ROOT_TITLE else self.state["pages"][page_name]
+        if db.get("in_trash"):
+            raise ValueError("Managed linked database was trashed; inspect state before recreating")
+        target = self.page_target(page_name)
         if db["parent"].get("page_id") != target:
             raise ValueError("Managed view moved to another page")
         if not all(contains(view.get(field), body[field]) for field in ["name", "configuration", "filter", "sorts"] if field in body):
@@ -491,19 +552,42 @@ class Deploy:
             spec = ("C08_Parallel", *main[1:3], "풀업 · 패러럴그립", *main[4:])
             body = adapt_filters(payload(spec, native_bindings["sets"]["schema"], scoped, native=True), native_bindings["sets"]["schema"])
             self.ensure_view("C08_Parallel", main[1], "sets", body, native_bindings["sets"]["source_id"], "C08")
-            for identity, role, label in [("H01", "sessions", "최근 12주 · 완료 세션"), ("H02", "sets", "최근 12주 · 기록 세트")]:
+            home_page = HOME if self.config.get("compact_layout") else ROOT_TITLE
+            for identity, role, label in [("H01", "sessions", "운동 횟수"), ("H02", "sets", "기록 세트")]:
                 bound = native_bindings[role]
-                number = {"name": "NFT " + identity + " · " + label, "type": "chart",
+                number = {"name": label, "type": "chart",
                           "filter": {"and": [{"property": "Done", "checkbox": {"equals": True}}, {"property": "Recent 12 Weeks", "checkbox": {"equals": True}}]},
-                          "configuration": {"type": "chart", "chart_type": "number", "value": {"aggregator": "count"}, "color_theme": "teal", "height": "small", "caption": "원본 직접 갱신 · 세션과 세트는 다른 단위"}}
+                          "configuration": {"type": "chart", "chart_type": "number", "value": {"aggregator": "count"}, "color_theme": "teal", "height": "small", "caption": "최근 12주"}}
+                if self.config.get("compact_layout"):
+                    number["filter"] = {"and": [{"property": "Done", "checkbox": {"equals": True}}, {"property": "Date", "date": {"this_week": {}}}]}
+                    number["configuration"]["caption"] = "이번 주 · 월요일 시작"
                 adapt_filters(number, bound["schema"])
-                self.ensure_view(identity, ROOT_TITLE, role, number, bound["source_id"])
+                self.ensure_view(identity, home_page, role, number, bound["source_id"])
             for identity in ["C04A", "C04B"]:
                 main = next(spec for spec in SPECS if spec[0] == identity)
-                spec = (identity + "_Home", ROOT_TITLE, *main[2:])
+                spec = (identity + "_Home", home_page, *main[2:])
                 bound = native_bindings[spec[2]]
                 body = adapt_filters(payload(spec, bound["schema"], self.config, native=True), bound["schema"])
-                self.ensure_view(spec[0], ROOT_TITLE, spec[2], body, bound["source_id"])
+                body["configuration"]["height"] = "small" if self.config.get("compact_layout") else "large"
+                self.ensure_view(spec[0], home_page, spec[2], body, bound["source_id"])
+            if self.config.get("compact_layout"):
+                for identity, role, label, names, condition in [
+                    ("H03", "sessions", "최근 운동", ["Session", "Date", "Split"], {"property": "Date", "date": {"past_week": {}}}),
+                    ("H04", "reviews", "최근 리뷰", ["Week", "Week Start", "리뷰 요약"], None),
+                ]:
+                    source = native_bindings[role]["source_id"] if role == "sessions" else self.config["reviews_data_source_id"]
+                    props = native_bindings[role]["all_properties"] if role == "sessions" else self.client.request("GET", "/data_sources/" + source)["properties"]
+                    props = {name: {**prop, "id": unquote(prop["id"])} for name, prop in props.items()}
+                    # The title always stays visible so a row can be opened.
+                    visible = [name for name, prop in props.items() if prop["type"] == "title"] + [name for name in names if name in props]
+                    table = {"name": label, "type": "table", "configuration": {"type": "table", "wrap_cells": False, "properties": [{"property_id": prop["id"], "visible": name in visible, "width": 140 if prop["type"] == "title" else 100} for name, prop in props.items()]}}
+                    dates = [name for name in names if name in props and props[name]["type"] == "date"]
+                    if dates:
+                        table["sorts"] = [{"property": props[dates[0]]["id"], "direction": "descending"}]
+                    if condition:
+                        table["filter"] = condition
+                        adapt_filters(table, props)
+                    self.ensure_view(identity, HOME, role, table, source)
         tables = [
             ("T01", "운동 성과", "sets", "최근 수행과 근거", ["Date", "Exercise", "Load", "Reps", "e1RM Display", "Condition", "Original Set"]),
             ("T02", "훈련 구성", "weekly", "주간 훈련 요약 · 전체 기간", ["Week", "Session Count", "Set Count", "Confirmed Working", "Warmup Count", "Unclassified Count", "Original Session"]),
@@ -520,12 +604,14 @@ class Deploy:
             if direct:
                 mapping = self.config["native_properties"][role]
                 names = [mapping.get(name, name) for name in names]
-                names += ["Set", "Session", "Exercise", "Set Notes"]
+                if not self.config.get("compact_layout"):
+                    names += ["Set", "Session", "Exercise", "Set Notes"]
+                names += [name for name, prop in schema_props.items() if prop["type"] == "title"]
                 date_id = bound["schema"]["Date"]["id"]
             else:
                 date_id = schema_props["Date"]["id"]
             table = {
-                "name": "NFT " + ident + " · " + label, "type": "table",
+                "name": label, "type": "table",
                 "sorts": [{"property": date_id, "direction": "descending"}],
                 "configuration": {"type": "table", "wrap_cells": True,
                     "properties": [{"property_id": prop["id"], "visible": name in names,
@@ -568,11 +654,15 @@ class Deploy:
             message = (f"집계 성공: {completed} · 원본 {diag['source_sessions']}세션 / {diag['source_sets']}세트"
                        f" · 조건 확인 {diag['comparable_sets']}세트 · 기준은 비교 보기에서 확인"
                        " · 차트는 원본 직접 갱신 · 상위 10 선정/주간 표는 이 시각의 집계")
+            if self.config.get("compact_layout"):
+                message = f"갱신 {completed} · {diag['source_sessions']}회 / {diag['source_sets']}세트"
             self.status(message, success=True)
             self.state["last_success"] = completed
             self.persist()
             return {"changes": changes, "last_success": completed,
-                    "root_url": self.state["root_url"], "native_views": len(self.state["views"])}
+                    "root_url": self.state["root_url"],
+                    "home_url": "https://www.notion.so/" + self.config["parent_page_id"].replace("-", ""),
+                    "native_views": len(self.state["views"])}
         except Exception:
             try:
                 self.status("집계 실패/미완료 · 마지막 성공: " + previous)

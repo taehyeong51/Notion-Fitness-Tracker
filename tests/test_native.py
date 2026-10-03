@@ -49,15 +49,15 @@ class NativeTests(unittest.TestCase):
         self.assertIn({'property': 'Original Exercise', 'relation': {'contains': 'bench-id'}}, filters)
         self.assertIn({'property': 'e1RM', 'number': {'greater_than': 0}}, filters)
         self.assertIn({'property': 'Comparable', 'checkbox': {'equals': True}}, filters)
-        self.assertTrue(body['name'].startswith('NFT C01_Bench'))
+        self.assertNotIn('C01_Bench', body['name'])
 
     def test_observation_is_explicit_and_does_not_enable_unverified_progress(self):
         names = ['Date', 'Done', 'Recent 12 Weeks', 'Original Exercise', 'Condition', 'Comparable', 'Pullup', 'Reps', 'e1RM', 'e1RM Display', 'Load', 'Index Display', 'Exercise', 'Metric']
         schema = {name: {'id': name, 'type': 'date' if name == 'Date' else 'select'} for name in names}
         config = {'strength_scope': {'exercise_id': 'deadlift-id', 'condition': 'unknown', 'observational': True}}
         observed = payload(SPECS[0], schema, config, native=True)
-        self.assertIn('조건 미확인 관측', observed['name'])
-        self.assertIn('동일 조건 발전으로 해석 금지', observed['configuration']['caption'])
+        self.assertIn('조건 미확인', observed['name'])
+        self.assertIn('발전 비교 제외', observed['configuration']['caption'])
         comparison = payload(next(s for s in SPECS if s[0] == 'C10'), schema, config, native=True)
         self.assertIn({'property': 'Metric', 'select': {'equals': 'e1rm'}}, comparison['filter']['and'])
 
@@ -67,7 +67,7 @@ class NativeTests(unittest.TestCase):
         config = {'top10_exercise_ids': ['exercise-a', 'exercise-b'], 'top10_updated_at': '2026-10-03'}
         body = payload(next(s for s in SPECS if s[0] == 'C06T'), schema, config, native=True)
         self.assertEqual(len(body['filter']['and'][-1]['or']), 2)
-        self.assertIn('상위 종목 선정: 2026-10-03', body['configuration']['caption'])
+        self.assertIn('순위 갱신 2026-10-03', body['configuration']['caption'])
 
 
 if __name__ == "__main__":

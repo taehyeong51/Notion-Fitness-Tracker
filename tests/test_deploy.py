@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 
 from notion.charts import SPECS, payload
-from notion.deploy import Deploy, FIELD_NAMES, FIELD_TYPES, ROLE_FIELDS, contains, properties, save
+from notion.deploy import Deploy, HOME, ROOT_TITLE, FIELD_NAMES, FIELD_TYPES, ROLE_FIELDS, contains, properties, save
 from notion.metrics import build
 
 
@@ -61,6 +61,24 @@ class SyncTests(unittest.TestCase):
         self.deployment.state["databases"]["sessions"] = {"data_source_id": "derived-source"}
         self.rows = [{"key": "original-session", "date": "2026-09-30", "week": "2026-09-28",
                       "split": "Pull", "done": True, "original_session": ["original-session"]}]
+
+    def test_removed_view_is_not_recreated_on_the_next_apply(self):
+        self.deployment.config['disabled_views'] = ['C10']
+        self.deployment.ensure_view('C10', '비교 분석', 'progress', {})
+        self.assertEqual(self.client.calls, [])
+        self.assertNotIn('C10', self.deployment.state['views'])
+
+    def test_home_view_targets_the_entry_page(self):
+        self.deployment.state['root'] = 'settings'
+        self.assertEqual(self.deployment.page_target(HOME), 'parent')
+        self.assertEqual(self.deployment.page_target(ROOT_TITLE), 'settings')
+
+    def test_compact_status_updates_only_the_settings_status(self):
+        self.deployment.config['compact_layout'] = True
+        self.deployment.state['status_blocks'] = {'운동 성과': 'performance-status', '관리·집계': 'settings-status'}
+        self.client.records['settings-status'] = {'id': 'settings-status'}
+        self.deployment.status('갱신 완료', success=True)
+        self.assertEqual([path for _, path, _ in self.client.calls], ['/blocks/settings-status'])
 
     def test_second_sync_does_not_create_or_update_unchanged_rows(self):
         first = self.deployment.sync_rows("sessions", self.rows)
