@@ -1,0 +1,19 @@
+{
+  "parent_page_id": null,
+  "chart_source_mode": "native",
+  "native_properties": {"sessions": {}, "sets": {}, "membership": {}, "progress": {}},
+  "data_sources": {"sessions": null, "sets": null, "exercises": null},
+  "properties": {
+    "sessions": {"date": null, "split": null, "done": null},
+    "sets": {"session": null, "exercise": null, "load": null, "reps": null, "set_type": null, "done": null, "historical_condition": null, "condition_confirmed": null},
+    "exercises": {"label": null, "muscle": null}
+  },
+  "completed_values": {"sessions": ["Complete", "Completed", "완료"], "sets": ["Complete", "Completed", "완료"]},
+  "set_type_values": {"Working": "Working", "Top Set": "Top Set", "Warm-up": "Warm-up", "Back-off": "Back-off", "Drop Set": "Drop Set", "Failure": "Failure", "Technique": "Technique"},
+  "pullup_exercise_ids": [],
+  "historical_condition_verified": false,
+  "strength_scope": {"exercise_id": null, "condition": null, "fixed_load": null, "observational": false},
+  "pullup_scope": {"exercise_id": null, "condition": null, "observational": false},
+  "strength_exercise_ids": [],
+  "baselines": []
+}
