@@ -5,7 +5,7 @@ Nothing in this module updates, archives, or reclassifies an original record.
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -74,6 +74,16 @@ def paragraph(content):
 def callout(content, color="yellow_background"):
     return {"object": "block", "type": "callout", "callout": {
         "rich_text": text(content), "icon": {"type": "emoji", "emoji": "ℹ️"}, "color": color}}
+
+
+def home_summary(projection, updated):
+    """A dated snapshot, independent of Notion's relative-date week filters."""
+    monday = updated.date() - timedelta(days=updated.weekday())
+    sunday = monday + timedelta(days=6)
+    row = next((item for item in projection["weekly"] if item["week"] == monday.isoformat()), {})
+    counts = f"기록된 운동 {row.get('sessions_count', 0)}회 · {row.get('sets_count', 0)}세트"
+    return (f"{monday:%m/%d}–{sunday:%m/%d}\n{counts}\n"
+            f"{updated:%m/%d %H:%M} 집계 · 수정 후 갱신 필요")
 
 
 def save(path, state):
@@ -179,6 +189,32 @@ class Deploy:
         if name == ROOT_TITLE:
             return self.state["root"]
         return self.state["pages"][name]
+
+    def summary(self, projection, updated):
+        if not self.config.get("compact_layout"):
+            return
+        content = home_summary(projection, updated)
+        block = self.state.get("home_summary")
+        body = callout(content, "gray_background")
+        body["callout"]["icon"] = {"type": "emoji", "emoji": "🏋️"}
+        if block:
+            self.client.request("PATCH", "/blocks/" + block, {"callout": body["callout"]})
+        else:
+            parent = self.config["parent_page_id"]
+            existing = list(self.client.pages(f"/blocks/{parent}/children", method="GET"))
+            matches = [item for item in existing if item["type"] == "callout" and
+                       "집계 · 수정 후 갱신 필요" in value({"type": "rich_text", "rich_text": item["callout"]["rich_text"]})]
+            if len(matches) > 1:
+                raise ValueError("Duplicate home summary")
+            if matches:
+                self.state["home_summary"] = matches[0]["id"]
+                self.persist()
+                self.client.request("PATCH", "/blocks/" + matches[0]["id"], {"callout": body["callout"]})
+            else:
+                position = {"type": "after_block", "after_block": {"id": self.config["home_summary_anchor"]}}
+                response = self.client.request("PATCH", f"/blocks/{parent}/children", {"position": position, "children": [body]})
+                self.state["home_summary"] = response["results"][0]["id"]
+                self.persist()
 
     def create_page(self, name, parent, note, status_enabled=True):
         matches = [row for row in self.client.search(name)
@@ -553,41 +589,37 @@ class Deploy:
             body = adapt_filters(payload(spec, native_bindings["sets"]["schema"], scoped, native=True), native_bindings["sets"]["schema"])
             self.ensure_view("C08_Parallel", main[1], "sets", body, native_bindings["sets"]["source_id"], "C08")
             home_page = HOME if self.config.get("compact_layout") else ROOT_TITLE
-            for identity, role, label in [("H01", "sessions", "운동 횟수"), ("H02", "sets", "기록 세트")]:
-                bound = native_bindings[role]
-                number = {"name": label, "type": "chart",
-                          "filter": {"and": [{"property": "Done", "checkbox": {"equals": True}}, {"property": "Recent 12 Weeks", "checkbox": {"equals": True}}]},
-                          "configuration": {"type": "chart", "chart_type": "number", "value": {"aggregator": "count"}, "color_theme": "teal", "height": "small", "caption": "최근 12주"}}
-                if self.config.get("compact_layout"):
-                    number["filter"] = {"and": [{"property": "Done", "checkbox": {"equals": True}}, {"property": "Date", "date": {"this_week": {}}}]}
-                    number["configuration"]["caption"] = "이번 주 · 월요일 시작"
-                adapt_filters(number, bound["schema"])
-                self.ensure_view(identity, home_page, role, number, bound["source_id"])
-            for identity in ["C04A", "C04B"]:
-                main = next(spec for spec in SPECS if spec[0] == identity)
-                spec = (identity + "_Home", home_page, *main[2:])
-                bound = native_bindings[spec[2]]
-                body = adapt_filters(payload(spec, bound["schema"], self.config, native=True), bound["schema"])
-                body["configuration"]["height"] = "small" if self.config.get("compact_layout") else "large"
-                self.ensure_view(spec[0], home_page, spec[2], body, bound["source_id"])
+            if not self.config.get("compact_layout"):
+                for identity, role, label in [("H01", "sessions", "운동 횟수"), ("H02", "sets", "기록 세트")]:
+                    bound = native_bindings[role]
+                    number = {"name": label, "type": "chart",
+                              "filter": {"and": [{"property": "Done", "checkbox": {"equals": True}}, {"property": "Recent 12 Weeks", "checkbox": {"equals": True}}]},
+                              "configuration": {"type": "chart", "chart_type": "number", "value": {"aggregator": "count"}, "color_theme": "teal", "height": "small", "caption": "최근 12주"}}
+                    adapt_filters(number, bound["schema"])
+                    self.ensure_view(identity, home_page, role, number, bound["source_id"])
+                for identity in ["C04A", "C04B"]:
+                    main = next(spec for spec in SPECS if spec[0] == identity)
+                    spec = (identity + "_Home", home_page, *main[2:])
+                    bound = native_bindings[spec[2]]
+                    body = adapt_filters(payload(spec, bound["schema"], self.config, native=True), bound["schema"])
+                    body["configuration"]["height"] = "large"
+                    self.ensure_view(spec[0], home_page, spec[2], body, bound["source_id"])
             if self.config.get("compact_layout"):
-                for identity, role, label, names, condition in [
-                    ("H03", "sessions", "최근 운동", ["Session", "Date", "Split"], {"property": "Date", "date": {"past_week": {}}}),
-                    ("H04", "reviews", "최근 리뷰", ["Week", "Week Start", "리뷰 요약"], None),
+                for identity, role, label, date_name, condition in [
+                    ("H03", "sessions", "최근 운동", "Date", {"property": "Date", "date": {"past_week": {}}}),
+                    ("H04", "reviews", "최근 리뷰", "Week Start", None),
                 ]:
                     source = native_bindings[role]["source_id"] if role == "sessions" else self.config["reviews_data_source_id"]
                     props = native_bindings[role]["all_properties"] if role == "sessions" else self.client.request("GET", "/data_sources/" + source)["properties"]
                     props = {name: {**prop, "id": unquote(prop["id"])} for name, prop in props.items()}
-                    # The title always stays visible so a row can be opened.
-                    visible = [name for name, prop in props.items() if prop["type"] == "title"] + [name for name in names if name in props]
-                    table = {"name": label, "type": "table", "configuration": {"type": "table", "wrap_cells": False, "properties": [{"property_id": prop["id"], "visible": name in visible, "width": 140 if prop["type"] == "title" else 100} for name, prop in props.items()]}}
-                    dates = [name for name in names if name in props and props[name]["type"] == "date"]
-                    if dates:
-                        table["sorts"] = [{"property": props[dates[0]]["id"], "direction": "descending"}]
+                    # A single title row avoids mobile table scrolling and duplicate dates.
+                    listing = {"name": label, "type": "list", "configuration": {"type": "list", "properties": [{"property_id": prop["id"], "visible": prop["type"] == "title"} for name, prop in props.items()]}}
+                    if date_name in props and props[date_name]["type"] == "date":
+                        listing["sorts"] = [{"property": props[date_name]["id"], "direction": "descending"}]
                     if condition:
-                        table["filter"] = condition
-                        adapt_filters(table, props)
-                    self.ensure_view(identity, HOME, role, table, source)
+                        listing["filter"] = condition
+                        adapt_filters(listing, props)
+                    self.ensure_view(identity, HOME, role, listing, source)
         tables = [
             ("T01", "운동 성과", "sets", "최근 수행과 근거", ["Date", "Exercise", "Load", "Reps", "e1RM Display", "Condition", "Original Set"]),
             ("T02", "훈련 구성", "weekly", "주간 훈련 요약 · 전체 기간", ["Week", "Session Count", "Set Count", "Confirmed Working", "Warmup Count", "Unclassified Count", "Original Session"]),
@@ -649,7 +681,9 @@ class Deploy:
             schemas = self.ensure_databases(roles)
             changes = {role: self.sync_rows(role, projection[role]) for role in roles}
             self.views(schemas, native_bindings)
-            completed = datetime.now(SEOUL).isoformat(timespec="seconds")
+            updated = datetime.now(SEOUL)
+            self.summary(projection, updated)
+            completed = updated.isoformat(timespec="seconds")
             diag = projection["diagnostics"]
             message = (f"집계 성공: {completed} · 원본 {diag['source_sessions']}세션 / {diag['source_sets']}세트"
                        f" · 조건 확인 {diag['comparable_sets']}세트 · 기준은 비교 보기에서 확인"

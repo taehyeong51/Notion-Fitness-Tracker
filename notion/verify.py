@@ -100,14 +100,7 @@ def run(client, config, state_path, before_path=None):
             continue
         selected = list(client.pages('/data_sources/' + view['data_source_id'] + '/query', {'filter': view['filter']}))
         chart_id = identity.split('_')[0]
-        if config.get('compact_layout') and chart_id in {'H01', 'H02'}:
-            monday = now - timedelta(days=now.weekday())
-            sunday = monday + timedelta(days=6)
-            if chart_id == 'H01':
-                expected_ids = {row['id'] for row in records['sessions'] if scalar(row, 'Completed') and day(scalar(row, 'Date')) and monday <= day(scalar(row, 'Date')) <= sunday}
-            else:
-                expected_ids = {o['row']['id'] for o in observations.values() if o['done'] and o['date'] and monday <= o['date'] <= sunday}
-        elif chart_id in {'C04A', 'C09A', 'H01'}:
+        if chart_id in {'C04A', 'C09A', 'H01'}:
             expected_ids = {row['id'] for row in records['sessions'] if scalar(row, 'Completed') and day(scalar(row, 'Date')) and lower <= day(scalar(row, 'Date')) <= now}
         else:
             eligible = [o for o in observations.values() if o['done'] and o['recent']]

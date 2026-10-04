@@ -1,12 +1,12 @@
 import copy
-from datetime import date
+from datetime import date, datetime
 import tempfile
 from pathlib import Path
 import unittest
 
 from notion.charts import SPECS, payload
-from notion.deploy import Deploy, HOME, ROOT_TITLE, FIELD_NAMES, FIELD_TYPES, ROLE_FIELDS, contains, properties, save
-from notion.metrics import build
+from notion.deploy import Deploy, HOME, ROOT_TITLE, FIELD_NAMES, FIELD_TYPES, ROLE_FIELDS, contains, properties, save, home_summary
+from notion.metrics import build, SEOUL
 
 
 class StateFileTests(unittest.TestCase):
@@ -18,6 +18,21 @@ class StateFileTests(unittest.TestCase):
             save(path, {'checkpoint': 'safe'})
             self.assertEqual(parent.stat().st_mode & 0o777, 0o755)
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+
+
+class HomeSummaryTests(unittest.TestCase):
+    def test_sunday_stays_in_the_same_monday_week(self):
+        projection = {'weekly': [{'week': '2026-09-28', 'sessions_count': 3, 'sets_count': 55}]}
+        result = home_summary(projection, datetime(2026, 10, 4, 9, 52, tzinfo=SEOUL))
+        self.assertIn('09/28–10/04', result)
+        self.assertIn('3회 · 55세트', result)
+        self.assertIn('10/04 09:52 집계', result)
+
+    def test_monday_does_not_reuse_the_previous_week_counts(self):
+        projection = {'weekly': [{'week': '2026-09-28', 'sessions_count': 3, 'sets_count': 55}]}
+        result = home_summary(projection, datetime(2026, 10, 5, 0, 1, tzinfo=SEOUL))
+        self.assertIn('10/05–10/11', result)
+        self.assertIn('0회 · 0세트', result)
 
 
 def returned_properties(encoded):
