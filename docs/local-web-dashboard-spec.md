@@ -311,7 +311,7 @@ web/
   package-lock.json
   dist/                        # 빌드 산출물, Git 제외
 tests/                         # 기존 Python 검사 유지
-tests/dashboard/               # 신규 분석·API 검사
+tests/test_dashboard/          # 신규 분석·API 검사
 web/tests/                     # 컴포넌트·브라우저 검사
 docs/
   local-web-dashboard-spec.md

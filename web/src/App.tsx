@@ -692,6 +692,11 @@ export default function App() {
               <option value="light">밝게</option>
               <option value="dark">어둡게</option>
             </select>
+            <ChevronDown
+              className="theme-chevron"
+              size={12}
+              aria-hidden="true"
+            />
           </label>
         </div>
       </header>
