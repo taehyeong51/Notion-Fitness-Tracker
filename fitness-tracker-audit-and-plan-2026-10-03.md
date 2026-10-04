@@ -2,7 +2,7 @@
 
 기준: 2026-10-04 · Asia/Seoul · 교육 Plus
 
-이 문서는 기존 Notion 네이티브 구성과 검증 이력입니다. 이후 채택한 독립 로컬 웹의 구현 기준은 [웹 대시보드 명세](docs/local-web-dashboard-spec.md)와 [목업](docs/assets/local-dashboard-mockup.png)에 정리합니다. 기록은 Notion에 유지하고 웹에서 읽습니다. 웹은 아직 구현하지 않았습니다.
+이 문서는 기존 Notion 네이티브 구성과 검증 이력입니다. 독립 로컬 웹의 구현 기준은 [웹 대시보드 명세](docs/local-web-dashboard-spec.md)와 [목업](docs/assets/local-dashboard-mockup.png), 사용법은 [실행 안내](docs/local-dashboard-runbook.md)에 정리했습니다. 기록은 Notion에 유지하고 웹에서 읽습니다. 아래 숫자는 당시 Notion 검증 이력이며 최신 웹 집계는 [별도 검증 결과](docs/local-dashboard-validation.md)를 참고하세요.
 
 [홈](https://www.notion.so/a6cac97b85638267a21381f41263a8eb) · [운동 성과](https://www.notion.so/3eeac97b85638158a44ae8fcf056a349) · [훈련 구성](https://www.notion.so/3eeac97b856381a2ad14c87b6e57c212) · [설정](https://www.notion.so/3eeac97b856381f09764c396b57d81e5)
 

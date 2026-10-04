@@ -1,18 +1,28 @@
 # Fitness Tracker
 
-[로컬 웹 명세](docs/local-web-dashboard-spec.md) · [채택한 목업](docs/assets/local-dashboard-mockup.png) · [기존 Notion 구성](fitness-tracker-audit-and-plan-2026-10-03.md) · [Notion 홈](https://www.notion.so/a6cac97b85638267a21381f41263a8eb)
+[로컬 웹 명세](docs/local-web-dashboard-spec.md) · [검증 결과](docs/local-dashboard-validation.md) · [채택한 목업](docs/assets/local-dashboard-mockup.png) · [기존 Notion 구성](fitness-tracker-audit-and-plan-2026-10-03.md) · [Notion 홈](https://www.notion.so/a6cac97b85638267a21381f41263a8eb)
 
-다음 구현은 Notion 원본을 읽는 **독립 로컬 웹 대시보드**입니다. PC에서 필요할 때 무료로 실행하며 접속·새로고침 시 조회합니다. 별도 로그인 없이 핵심 종목 선택, PC·모바일 분석, 시스템 테마를 제공합니다. 현재는 명세와 목업을 저장한 단계이며 웹 앱은 아직 구현하지 않았습니다.
+Notion 원본을 읽는 **독립 로컬 웹 대시보드**입니다. PC에서 필요할 때 무료로 실행하며 접속·새로고침 시 조회합니다. 별도 로그인 없이 핵심 종목 선택, PC·모바일 분석, 시스템 테마, C01–C10 분석과 CSV·PNG 내보내기를 제공합니다. 기록은 Burnfit → ChatGPT/MCP → Notion 방식으로 유지합니다.
+
+첫 설치와 토큰·원본 연결, Windows·macOS·Linux 실행은 [로컬 실행 문서](docs/local-dashboard-runbook.md)를 따릅니다. 연결과 웹 빌드를 마친 뒤에는 Python 서버 하나만 실행합니다.
+
+```bash
+.venv/bin/python -m dashboard
+# 같은 LAN의 휴대폰에서 사용
+.venv/bin/python -m dashboard --lan
+```
+
+Windows에서는 `.venv\Scripts\python.exe -m dashboard`를 사용합니다. PC가 켜져 있고 앱이 실행 중일 때 접근할 수 있습니다. 웹은 원본을 수정하지 않으며, 갱신 실패 시 이전 조회 데이터와 성공 시각을 유지합니다.
 
 기존 교육 Plus용 Notion 네이티브 구성은 유지합니다. 홈에는 기간·집계 시각이 있는 주간 요약과 최근 운동·리뷰의 연결 목록, 상세 분석에는 운동 성과·훈련 구성을 둡니다. Notion 페이지 안에 HTML 대시보드를 삽입하지 않습니다.
 
 ## 기존 Notion 도구 실행
 
-Python 3.12 이상, 표준 라이브러리만 필요합니다. 환경 secret `NOTION_TOKEN`과 `api.notion.com` 접속을 사용합니다.
+Notion 관리 명령은 Python 3.12 이상과 표준 라이브러리로 실행합니다. 웹과 전체 검사는 위 설치 문서의 의존성이 필요합니다. 환경 secret `NOTION_TOKEN`과 `api.notion.com` 접속을 사용합니다.
 
 ```bash
 cd /workspace/Notion-Fitness-Tracker
-python3 -m unittest discover -s tests -v
+.venv/bin/python -m unittest discover -s tests -v
 python3 -m notion plan
 python3 -m notion apply
 python3 -m notion verify --original .local/notion-original.json

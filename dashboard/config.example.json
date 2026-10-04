@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "data_sources": {"sessions": null, "sets": null, "exercises": null},
+  "properties": {
+    "sessions": {"date": "Date", "split": "Split", "done": "Completed"},
+    "sets": {
+      "session": "Session", "exercise": "Exercise", "load": "Load (kg)",
+      "reps": "Reps", "set_type": "Set Type", "done": "Completed",
+      "historical_condition": null, "condition_confirmed": null, "pullup_mode": null
+    },
+    "exercises": {"label": "Exercise", "muscle": "Primary Muscle"}
+  },
+  "completed_values": {"sessions": ["Complete", "Completed", "완료"], "sets": ["Complete", "Completed", "완료"]},
+  "set_type_values": {
+    "Working": "Working", "Top Set": "Top Set", "Warm-up": "Warm-up",
+    "Back-off": "Back-off", "Drop Set": "Drop Set", "Failure": "Failure", "Technique": "Technique"
+  },
+  "pullup_exercise_ids": [],
+  "historical_condition_verified": false,
+  "load_unit": "kg",
+  "load_unit_verified": false,
+  "external_load_verified": false,
+  "pullup_mode_verified": false,
+  "pullup_mode_values": {},
+  "optional_sources": {}
+}

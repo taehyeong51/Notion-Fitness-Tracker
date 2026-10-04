@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "notion-fitness-dashboard"
+version = "1.0.0"
+description = "Private on-demand local fitness dashboard reading Notion"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.141.1",
+  "uvicorn==0.52.1",
+  "tzdata==2026.5",
+]
+
+[project.optional-dependencies]
+test = ["httpx==0.28.1"]
+
+[tool.setuptools.packages.find]
+include = ["dashboard*", "notion*"]
