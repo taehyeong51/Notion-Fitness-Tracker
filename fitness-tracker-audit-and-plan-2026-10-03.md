@@ -2,6 +2,8 @@
 
 기준: 2026-10-04 · Asia/Seoul · 교육 Plus
 
+이 문서는 기존 Notion 네이티브 구성과 검증 이력입니다. 이후 채택한 독립 로컬 웹의 구현 기준은 [웹 대시보드 명세](docs/local-web-dashboard-spec.md)와 [목업](docs/assets/local-dashboard-mockup.png)에 정리합니다. 기록은 Notion에 유지하고 웹에서 읽습니다. 웹은 아직 구현하지 않았습니다.
+
 [홈](https://www.notion.so/a6cac97b85638267a21381f41263a8eb) · [운동 성과](https://www.notion.so/3eeac97b85638158a44ae8fcf056a349) · [훈련 구성](https://www.notion.so/3eeac97b856381a2ad14c87b6e57c212) · [설정](https://www.notion.so/3eeac97b856381f09764c396b57d81e5)
 
 ## 화면
@@ -14,7 +16,7 @@
 | 건강·체성분 | 체성분·건강 기록, 기존 러닝 분석 |
 | 설정 | 원본 DB, 측정조건·기준 입력, 집계 시각 |
 
-일반 페이지에 네이티브 차트와 연결 테이블을 배치합니다. HTML·외부 대시보드·Business 전용 Dashboard view는 사용하지 않습니다. 홈은 한 열이며, 세부 분석으로 바로 이동할 수 있습니다.
+기존 Notion 일반 페이지에 네이티브 차트와 연결 테이블을 배치합니다. 이 구성은 HTML 삽입·Business 전용 Dashboard view를 사용하지 않습니다. 홈은 한 열이며, 세부 분석으로 바로 이동할 수 있습니다. 별도로 채택한 로컬 웹은 위 명세를 따릅니다.
 
 ## 채택한 차트
 

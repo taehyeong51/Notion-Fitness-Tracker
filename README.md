@@ -1,10 +1,12 @@
 # Fitness Tracker
 
-[Notion 홈](https://www.notion.so/a6cac97b85638267a21381f41263a8eb) · [구성 문서](fitness-tracker-audit-and-plan-2026-10-03.md)
+[로컬 웹 명세](docs/local-web-dashboard-spec.md) · [채택한 목업](docs/assets/local-dashboard-mockup.png) · [기존 Notion 구성](fitness-tracker-audit-and-plan-2026-10-03.md) · [Notion 홈](https://www.notion.so/a6cac97b85638267a21381f41263a8eb)
 
-교육 Plus용 네이티브 차트와 연결 보기입니다. 홈에는 기간·집계 시각을 표시한 주간 요약과 최근 운동·리뷰의 연결 목록을 둡니다. 큰 숫자 차트와 가로 표는 상세 분석에서 확인합니다. 상세 분석은 운동 성과·훈련 구성, 원본 DB와 비교 입력은 설정에 있습니다. HTML과 외부 대시보드는 사용하지 않습니다.
+다음 구현은 Notion 원본을 읽는 **독립 로컬 웹 대시보드**입니다. PC에서 필요할 때 무료로 실행하며 접속·새로고침 시 조회합니다. 별도 로그인 없이 핵심 종목 선택, PC·모바일 분석, 시스템 테마를 제공합니다. 현재는 명세와 목업을 저장한 단계이며 웹 앱은 아직 구현하지 않았습니다.
 
-## 실행
+기존 교육 Plus용 Notion 네이티브 구성은 유지합니다. 홈에는 기간·집계 시각이 있는 주간 요약과 최근 운동·리뷰의 연결 목록, 상세 분석에는 운동 성과·훈련 구성을 둡니다. Notion 페이지 안에 HTML 대시보드를 삽입하지 않습니다.
+
+## 기존 Notion 도구 실행
 
 Python 3.12 이상, 표준 라이브러리만 필요합니다. 환경 secret `NOTION_TOKEN`과 `api.notion.com` 접속을 사용합니다.
 
