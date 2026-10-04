@@ -621,17 +621,16 @@ input[type="checkbox"] {
   box-shadow: var(--shadow);
   position: relative;
 }
-.panel-actions {
+.chart-toolbar-actions {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
-  position: absolute;
-  right: 14px;
-  top: 10px;
-  z-index: 2;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .panel .chart-toolbar {
-  padding-right: 170px;
+  flex-wrap: wrap;
+  padding-right: 0;
   min-height: 31px;
   margin-bottom: 8px;
   display: flex;
@@ -642,7 +641,7 @@ input[type="checkbox"] {
   font-size: 16px;
   letter-spacing: -0.5px;
 }
-.panel .chart-toolbar button {
+.panel .chart-toolbar .icon-button {
   min-height: 25px;
   padding: 3px 5px;
   font-size: 10px;
@@ -650,7 +649,7 @@ input[type="checkbox"] {
   background: transparent;
   color: var(--muted);
 }
-.panel .chart-toolbar button svg {
+.panel .chart-toolbar .icon-button svg {
   width: 13px;
   height: 13px;
 }
@@ -797,10 +796,6 @@ input[type="checkbox"] {
 .health-panel > summary svg:last-child {
   margin-left: auto;
   color: var(--muted);
-}
-.expandable[open] .panel-actions {
-  position: static;
-  margin: 10px 0;
 }
 .expandable .chart-toolbar {
   padding-right: 0;
@@ -1467,10 +1462,6 @@ input[type="checkbox"] {
   .secondary-charts {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
-  .panel-actions {
-    position: static;
-    margin-bottom: 7px;
-  }
   .panel .chart-toolbar {
     padding-right: 0;
   }
@@ -1757,15 +1748,10 @@ input[type="checkbox"] {
     border-radius: 10px;
     padding: 12px;
   }
-  .panel-actions {
-    position: static;
-    margin-bottom: 8px;
-    justify-content: flex-end;
-  }
-  .panel-actions .segmented {
+  .chart-toolbar-actions .segmented {
     max-width: 100%;
   }
-  .panel-actions .segmented button {
+  .chart-toolbar-actions .segmented button {
     min-height: 31px;
     font-size: 10px;
     padding: 4px 9px;
@@ -1781,7 +1767,7 @@ input[type="checkbox"] {
     line-height: 1.3;
     min-width: 0;
   }
-  .panel .chart-toolbar button {
+  .panel .chart-toolbar .icon-button {
     min-height: 32px;
     flex-shrink: 0;
     font-size: 9px;
@@ -2238,7 +2224,7 @@ input[type="checkbox"] {
   .mobile-core-tabs button,
   .section-heading > .secondary,
   .filter-button,
-  .panel-actions .segmented button,
+  .chart-toolbar-actions .segmented button,
   .detail-tabs button,
   .export-actions button,
   .chart-legend button {
@@ -2424,7 +2410,7 @@ input[type="checkbox"] {
   }
 }
 @media (max-width: 767px) {
-  .panel .chart-toolbar button {
+  .panel .chart-toolbar .icon-button {
     min-height: 44px;
     min-width: 44px;
   }

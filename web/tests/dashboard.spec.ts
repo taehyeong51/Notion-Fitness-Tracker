@@ -162,6 +162,7 @@ test.describe('filters, themes, settings and details', () => {
     await expect(page.getByRole('button', { name: '새로고침', exact: true })).toBeEnabled();
     const panel = page.locator('.recent-panel');
     await expect(panel.locator('.desktop-sessions tbody tr')).toHaveCount(3);
+    await expect(page.locator('.fetch-time')).toContainText('10/04');
     const refreshes = calls.refresh;
     const snapshot = calls.analysis.at(-1).snapshot_id;
     await panel.getByRole('button', { name: '더 보기', exact: true }).click();
