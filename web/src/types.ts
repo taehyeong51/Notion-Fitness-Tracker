@@ -105,6 +105,7 @@ export interface Catalog {
     pullup_modes?: string[];
   }[];
   default_core_exercise_ids: string[];
+  ambiguous_default_exercises?: { name: string; exercise_ids: string[] }[];
   filters?: { splits: string[]; set_types: string[] };
   splits?: string[];
   set_types?: string[];

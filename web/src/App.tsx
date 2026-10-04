@@ -807,6 +807,12 @@ export default function App() {
             />
           </section>
           <section className="core-section">
+            {Boolean(catalog?.ambiguous_default_exercises?.length) && (
+              <p className="refresh-note">
+                기본 종목에 같은 이름의 기록이 있습니다. 종목 설정에서 직접
+                선택하세요.
+              </p>
+            )}
             <div className="section-heading">
               <div>
                 <h2>핵심 종목</h2>
@@ -967,23 +973,23 @@ export default function App() {
           )}
           <div className="charts-grid primary-charts">
             <section className="panel" data-testid="chart-C04">
-              <div className="panel-actions">
-                <ModeButtons
-                  label="주간 훈련량 지표"
-                  items={[
-                    { key: "sessions", label: "운동 횟수" },
-                    { key: "sets", label: "세트 수" },
-                    { key: "volume", label: "볼륨" },
-                  ]}
-                  value={weeklyMode}
-                  onChange={setWeeklyMode}
-                />
-              </div>
               <DataChart
                 chart={chartOf(analysis, "C04", weeklyMode)}
                 color={weeklyMode === "sets" ? undefined : "#0ca8a1"}
                 kind="bar"
                 {...graphProps}
+                actions={
+                  <ModeButtons
+                    label="주간 훈련량 지표"
+                    items={[
+                      { key: "sessions", label: "운동 횟수" },
+                      { key: "sets", label: "세트 수" },
+                      { key: "volume", label: "볼륨" },
+                    ]}
+                    value={weeklyMode}
+                    onChange={setWeeklyMode}
+                  />
+                }
               />
             </section>
             <section className="panel" data-testid="chart-C05">
@@ -996,39 +1002,39 @@ export default function App() {
           </div>
           <div className="charts-grid secondary-charts">
             <section className="panel" data-testid="chart-C09">
-              <div className="panel-actions">
-                <ModeButtons
-                  label="분할별 구성 지표"
-                  items={[
-                    { key: "sessions", label: "운동 횟수" },
-                    { key: "sets", label: "세트 수" },
-                  ]}
-                  value={splitMode}
-                  onChange={setSplitMode}
-                />
-              </div>
               <DataChart
                 chart={chartOf(analysis, "C09", splitMode)}
                 kind="donut"
                 {...graphProps}
+                actions={
+                  <ModeButtons
+                    label="분할별 구성 지표"
+                    items={[
+                      { key: "sessions", label: "운동 횟수" },
+                      { key: "sets", label: "세트 수" },
+                    ]}
+                    value={splitMode}
+                    onChange={setSplitMode}
+                  />
+                }
               />
             </section>
             <section className="panel" data-testid="chart-C07">
-              <div className="panel-actions">
-                <ModeButtons
-                  label="종목별 빈도 범위"
-                  items={[
-                    { key: "top10", label: "상위 10" },
-                    { key: "all", label: "전체" },
-                  ]}
-                  value={frequencyMode}
-                  onChange={setFrequencyMode}
-                />
-              </div>
               <DataChart
                 chart={chartOf(analysis, "C07", frequencyMode)}
                 kind="bar"
                 {...graphProps}
+                actions={
+                  <ModeButtons
+                    label="종목별 빈도 범위"
+                    items={[
+                      { key: "top10", label: "상위 10" },
+                      { key: "all", label: "전체" },
+                    ]}
+                    value={frequencyMode}
+                    onChange={setFrequencyMode}
+                  />
+                }
               />
             </section>
           </div>
@@ -1037,21 +1043,21 @@ export default function App() {
               <BarChart3 size={18} /> 종목별 세트 분포
               <ChevronDown size={18} />
             </summary>
-            <div className="panel-actions">
-              <ModeButtons
-                label="종목별 세트 분포 범위"
-                items={[
-                  { key: "top10", label: "상위 10" },
-                  { key: "all", label: "전체" },
-                ]}
-                value={setsMode}
-                onChange={setSetsMode}
-              />
-            </div>
             <DataChart
               chart={chartOf(analysis, "C06", setsMode)}
               kind="horizontal"
               {...graphProps}
+              actions={
+                <ModeButtons
+                  label="종목별 세트 분포 범위"
+                  items={[
+                    { key: "top10", label: "상위 10" },
+                    { key: "all", label: "전체" },
+                  ]}
+                  value={setsMode}
+                  onChange={setSetsMode}
+                />
+              }
             />
           </details>
           <section className="panel detail-panel">

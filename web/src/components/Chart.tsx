@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Bar,
   BarChart,
@@ -37,6 +37,7 @@ interface Props {
   compact?: boolean;
   showAxes?: boolean;
   exportable?: boolean;
+  actions?: ReactNode;
 }
 
 const COLORS = [
@@ -247,6 +248,7 @@ export function DataChart({
   compact = false,
   showAxes = false,
   exportable = true,
+  actions,
 }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -672,18 +674,21 @@ export function DataChart({
           }}
         >
           <h3>{chart.title}</h3>
-          {exportable && chart.status === "ok" && hasValues && (
-            <button
-              type="button"
-              className="icon-button"
-              title={`${chart.title} PNG 저장`}
-              aria-label={`${chart.title} PNG 저장`}
-              disabled={exporting}
-              onClick={save}
-            >
-              <Download size={17} />
-            </button>
-          )}
+          <div className="chart-toolbar-actions">
+            {exportable && chart.status === "ok" && hasValues && (
+              <button
+                type="button"
+                className="icon-button"
+                title={`${chart.title} PNG 저장`}
+                aria-label={`${chart.title} PNG 저장`}
+                disabled={exporting}
+                onClick={save}
+              >
+                <Download size={17} />
+              </button>
+            )}
+            {actions}
+          </div>
         </div>
       )}
       {chart.status !== "ok" || !hasValues ? (
